@@ -1,22 +1,9 @@
 /*
-  LiquidCrystal Library
-
-  The circuit:
-   LCD RS pin to digital pin 12
-   LCD Enable pin to digital pin 11
-   LCD D4 pin to digital pin 5
-   LCD D5 pin to digital pin 4
-   LCD D6 pin to digital pin 3
-   LCD D7 pin to digital pin 2
-   LCD R/W pin to ground
-   LCD VSS pin to ground
-   LCD VCC pin to 5V
-   10K resistor:
-   ends to +5V and ground
-   wiper to LCD VO pin (pin 3)
+   Social Distancing Sensor
 */
 
-#include <LiquidCrystal.h>
+#include <LiquidCrystal.h> // library for LCD-Display
+#include <TFMPlus.h>       // library for Lidar: TFMini Plus Library
 
 // speaker tunes
 #define NOTE_C4  262
@@ -33,14 +20,21 @@
 #define SPKR_PIN 8
 
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+TFMPlus tfmP;     // TFMini Plus "object"
 
 int distance;
 boolean toClose;
 
+int16_t tfDist; // Distance to object in centimeters
+int16_t tfFlux; // Strength or quality of return signal
+int16_t tfTemp; // Internal temperature of Lidar sensor chip
+
+int counter = 0; // counter for what?
+char dist[11];   // ???
 
 /**
- * Reads data from ultrasonic sensor (time).
- */
+   Reads data from ultrasonic sensor (time).
+*/
 long readUltrasonicDistance(int triggerPin, int echoPin) {
   pinMode(triggerPin, OUTPUT);  // Clear the trigger
   digitalWrite(triggerPin, LOW);
@@ -58,30 +52,52 @@ long readUltrasonicDistance(int triggerPin, int echoPin) {
 
 
 /**
- * Converts ultrasonic distance to centimeters.
- */
+   Converts ultrasonic distance to centimeters.
+*/
 int getUltrasonicDistance() {
   return 0.01723 * readUltrasonicDistance(TRIG_PIN, ECHO_PIN);
 }
 
-
 /**
- * Let LED blink and activate alarm
- * if distance to close.
- */
-void setAlarm() {
-    digitalWrite(LED_PIN, HIGH);
-    setTone(true);
-    delay(1000);
-
-    digitalWrite(LED_PIN, LOW);
-    setTone(false);
-    delay(1000);
+   Get the lidar distance in centimeters.
+*/
+int getLidarDistance() {
+  // TODO possibly remove if statemant, if the getData() has a default "error" value
+  if (tfmP.getData(tfDist, tfFlux, tfTemp)) {
+    return tfDist;
+  } else {
+    return -1;
+  }
 }
 
 /**
- * Plays alarm sound
+ * Get distance as an average value of lidar and ultrasonic sensor.
  */
+int getDistance() {
+  // TODO optimize this method, based on a scientific method
+  // https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8124335/
+
+  return (getLidarDistance() + getUltrasonicDistance()) / 2;
+}
+
+
+/**
+   Let LED blink and activate alarm
+   if distance to close.
+*/
+void setAlarm() {
+  digitalWrite(LED_PIN, HIGH);
+  setTone(true);
+  delay(1000);
+
+  digitalWrite(LED_PIN, LOW);
+  setTone(false);
+  delay(1000);
+}
+
+/**
+   Plays alarm sound
+*/
 void setTone(boolean ledIsOn) {
   if (ledIsOn) {
     noTone(SPKR_PIN);
@@ -96,14 +112,18 @@ void setTone(boolean ledIsOn) {
 void setup() {
   // set up the LCD's number of columns and rows:
   lcd.begin(16, 2);
+  lcd.clear();
   Serial.begin(9600);
+  //Serial.begin(115200);
+  delay(20);           // give port time to initialize
+  tfmP.begin(&Serial); // initialize device library object and...
   pinMode(LED_PIN, OUTPUT);
 }
 
 
 void loop() {
 
-  distance = getUltrasonicDistance();
+  distance = getDistance();
 
   // print distance value
   lcd.setCursor(0, 0);
@@ -115,18 +135,17 @@ void loop() {
 
   if (distance < 200.00) {
     lcd.setCursor(0, 1);
-    lcd.write("ABSTAND!|");
+    lcd.print("ABSTAND!|");
     toClose = true;
     setAlarm();
   } else {
     noTone(SPKR_PIN);           // turn Speaker off
     digitalWrite(LED_PIN, LOW); // turn LED off
     lcd.setCursor(0, 1);
-    lcd.write("        |");
+    lcd.print("        |");
     toClose = false;
   }
 
   delay(100);
   lcd.clear();
 }
-  
