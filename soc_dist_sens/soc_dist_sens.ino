@@ -4,8 +4,7 @@
 
 #include <LiquidCrystal.h> // library for LCD-Display
 #include <TFMPlus.h>       // library for Lidar: TFMini Plus Library
-//#include <SD_MHZ19B.h>     // library for CO2: MHZ19B
-#include <MHZ.h>
+#include <MHZ.h> // library for CO2: MHZ19B
 
 // speaker tunes
 #define NOTE_C4  262
@@ -29,7 +28,7 @@
 
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 TFMPlus tfmP;     // TFMini Plus "object"
-MHZ co2(MH_Z19_RX, MH_Z19_TX, CO2_IN, MHZ19B); // MH_Z19B "object"
+MHZ co2(MH_Z19_RX, MH_Z19_TX, CO2_IN, MHZ19B); // MH_Z19B "object" (to adapt if uart is not used)
 
 int distance;
 boolean toClose;
@@ -42,8 +41,8 @@ int16_t tfDist; // Distance to object in centimeters
 int16_t tfFlux; // Strength or quality of return signal
 int16_t tfTemp; // Internal temperature of Lidar sensor chip
 
-int counter = 0; // counter for what?
-char dist[11];   // ???
+int counter = 0; // TODO counter for what?
+char dist[11];   // TODO ???
 
 /**
    Reads data from ultrasonic sensor (time).
@@ -146,7 +145,8 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   pinMode(CO2_IN, INPUT);
   
-  co2.setAutoCalibrate(true); // calibrates the sensor, maybe a delay is needed
+  // TODO check if calibration works, maybe delay needed
+  co2.setAutoCalibrate(true);
 }
 
 
