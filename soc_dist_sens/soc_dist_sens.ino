@@ -4,6 +4,8 @@
 
 #include <LiquidCrystal.h> // library for LCD-Display
 #include <TFMPlus.h>       // library for Lidar: TFMini Plus Library
+//#include <SD_MHZ19B.h>     // library for CO2: MHZ19B
+#include <MHZ.h>
 
 // speaker tunes
 #define NOTE_C4  262
@@ -19,11 +21,22 @@
 // speaker pin
 #define SPKR_PIN 8
 
+// co2 sensor pins
+#define CO2_IN 10 // pin for pwm reading
+// pin for uart reading
+#define MH_Z19_RX 0
+#define MH_Z19_TX 1
+
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 TFMPlus tfmP;     // TFMini Plus "object"
+MHZ co2(MH_Z19_RX, MH_Z19_TX, CO2_IN, MHZ19B); // MH_Z19B "object"
 
 int distance;
 boolean toClose;
+
+int co2_sens[3];
+int co2Level;
+int temperature;
 
 int16_t tfDist; // Distance to object in centimeters
 int16_t tfFlux; // Strength or quality of return signal
@@ -82,6 +95,19 @@ int getDistance() {
 
 
 /**
+ * Get co2 level in:
+ * 0) ppm_uart
+ * 1) ppm_pwm
+ * 2) temperature
+ */
+void getCo2Data() {
+  co2_sens[0] = co2.readCO2UART();
+  co2_sens[1] = co2.readCO2PWM();
+  co2_sens[2] = co2.getLastTemperature();
+}
+
+
+/**
    Let LED blink and activate alarm
    if distance to close.
 */
@@ -118,12 +144,16 @@ void setup() {
   delay(20);           // give port time to initialize
   tfmP.begin(&Serial); // initialize device library object and...
   pinMode(LED_PIN, OUTPUT);
+  pinMode(CO2_IN, INPUT);
+  
+  co2.setAutoCalibrate(true); // calibrates the sensor, maybe a delay is needed
 }
 
 
 void loop() {
 
   distance = getDistance();
+  getCo2Data();
 
   // print distance value
   lcd.setCursor(0, 0);
