@@ -31,10 +31,10 @@ TFMPlus tfmP;     // TFMini Plus "object"
 MHZ co2(MH_Z19_RX, MH_Z19_TX, CO2_IN, MHZ19B); // MH_Z19B "object" (to adapt if uart is not used)
 
 int distance;
-boolean toClose;
+boolean toClose; // TODO probably not needed
 
-int co2_sens[3];
-int co2Level;
+int co2Level_pwm;
+int co2Level_uart;
 int temperature;
 
 int16_t tfDist; // Distance to object in centimeters
@@ -62,7 +62,6 @@ long readUltrasonicDistance(int triggerPin, int echoPin) {
   return pulseIn(echoPin, HIGH);
 }
 
-
 /**
    Converts ultrasonic distance to centimeters.
 */
@@ -83,8 +82,8 @@ int getLidarDistance() {
 }
 
 /**
- * Get distance as an average value of lidar and ultrasonic sensor.
- */
+   Get distance as an average value of lidar and ultrasonic sensor.
+*/
 int getDistance() {
   // TODO optimize this method, based on a scientific method
   // https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8124335/
@@ -92,19 +91,17 @@ int getDistance() {
   return (getLidarDistance() + getUltrasonicDistance()) / 2;
 }
 
-
 /**
- * Get co2 level in:
- * 0) ppm_uart
- * 1) ppm_pwm
- * 2) temperature
- */
+   Get 3 different values from co2 sensor:
+   0) ppm_uart
+   1) ppm_pwm
+   2) temperature
+*/
 void getCo2Data() {
-  co2_sens[0] = co2.readCO2UART();
-  co2_sens[1] = co2.readCO2PWM();
-  co2_sens[2] = co2.getLastTemperature();
+  co2Level_uart = co2.readCO2UART();
+  co2Level_pwm = co2.readCO2PWM();
+  temperature = co2.getLastTemperature();
 }
-
 
 /**
    Let LED blink and activate alarm
@@ -133,6 +130,30 @@ void setTone(boolean ledIsOn) {
   }
 }
 
+/**
+ * Print the co2 level data and temperature
+ * if the level is ok, or the "alarm message"
+ * if the level is to high, and you should aerate
+ * the room.
+ */
+void printCo2Data(bool toHigh) {
+  if (toHigh) {
+    lcd.setCursor(9, 0);
+    lcd.print("AIR THE");
+    lcd.setCursor(9, 1);
+    lcd.print("ROOM!");
+  } else {
+    lcd.setCursor(9, 0);
+    lcd.print(co2Level_pwm);
+    lcd.setCursor(12, 0);
+    lcd.print("ppm");
+    lcd.setCursor(9, 1);
+    lcd.print(temperature);
+    lcd.setCursor(12, 1);
+    lcd.print("°C");
+  }
+}
+
 
 void setup() {
   // set up the LCD's number of columns and rows:
@@ -144,11 +165,10 @@ void setup() {
   tfmP.begin(&Serial); // initialize device library object and...
   pinMode(LED_PIN, OUTPUT);
   pinMode(CO2_IN, INPUT);
-  
+
   // TODO check if calibration works, maybe delay needed
   co2.setAutoCalibrate(true);
 }
-
 
 void loop() {
 
@@ -175,6 +195,9 @@ void loop() {
     lcd.print("        |");
     toClose = false;
   }
+
+  // print co2 value
+  printCo2Data(co2Level_pwm < 1000);
 
   delay(100);
   lcd.clear();
