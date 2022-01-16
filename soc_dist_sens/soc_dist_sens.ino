@@ -4,7 +4,7 @@
 
 #include <LiquidCrystal.h> // library for LCD-Display
 #include <TFMPlus.h>       // library for Lidar: TFMini Plus Library
-#include <MHZ.h> // library for CO2: MHZ19B
+#include <MHZ.h>           // library for CO2: MHZ19B
 
 // speaker tunes
 #define NOTE_C4  262
@@ -28,17 +28,13 @@ TFMPlus tfmP;     // TFMini Plus "object"
 MHZ co2(CO2_IN, MHZ19B); // MH_Z19B "object"
 
 int distance;
-boolean toClose; // TODO probably not needed
 
 int co2Level_pwm;
-int co2Level_uart;
 int temperature;
 
 int16_t tfDist; // Distance to object in centimeters
 int16_t tfFlux; // Strength or quality of return signal
 int16_t tfTemp; // Internal temperature of Lidar sensor chip
-
-int counter = 0; // TODO counter for what?
 
 /**
    Reads data from ultrasonic sensor (time).
@@ -84,18 +80,25 @@ int getDistance() {
   // TODO optimize this method, based on a scientific method
   // https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8124335/
 
-  return (getLidarDistance() + getUltrasonicDistance()) / 2;
+  int ultraDist = getUltrasonicDistance();
+  int lidarDist = getLidarDistance();
+
+  if (ultraDist < 30) {
+    return ultraDist;
+  } else if (lidarDist > 400) {
+    return lidarDist;
+  }
+  return (lidarDist + ultraDist) / 2;
 }
 
 /**
    Get 3 different values from co2 sensor:
-   0) ppm_uart
    1) ppm_pwm
    2) temperature
 */
 void getCo2Data() {
   co2Level_pwm = co2.readCO2PWM();
-  temperature = co2.getLastTemperature();
+  temperature = co2.getLastTemperature(); // TODO check if correct after calibration
 }
 
 /**
@@ -145,7 +148,36 @@ void printCo2Data(bool toHigh) {
     lcd.setCursor(9, 1);
     lcd.print(temperature);
     lcd.setCursor(12, 1);
-    lcd.print("°C");
+    lcd.print("C");
+  }
+}
+
+/**
+ * Print distance if under 1200cm
+ * and ABSTAND if less than 200cm.
+ */
+void printDistance(int distance) {
+  lcd.setCursor(0, 0);
+  lcd.print(distance);
+  lcd.setCursor(4, 0);
+  lcd.print("cm");
+  lcd.setCursor(8, 0);
+  lcd.print("|");
+  lcd.setCursor(0, 1);
+  lcd.print("        |");
+
+
+  if (distance < 200) {
+    lcd.setCursor(0, 1);
+    lcd.print("ABSTAND!|");
+    setAlarm();
+  } else if (distance > 1200) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(">1200cm |");
+  } else {
+    noTone(SPKR_PIN);           // turn Speaker off
+    digitalWrite(LED_PIN, LOW); // turn LED off
   }
 }
 
@@ -160,39 +192,55 @@ void setup() {
   tfmP.begin(&Serial); // initialize device library object and...
   pinMode(LED_PIN, OUTPUT);
   pinMode(CO2_IN, INPUT);
+  delay(100);
+/*
+  if (co2.isPreHeating()) {
+    while (co2.isPreHeating()) {
+      lcd.setCursor(0, 0);
+      lcd.print("Preheating...");
+      delay(1000);
+      lcd.clear();
+    }
+  }
+  */
 
   // TODO check if calibration works, maybe delay needed
-  co2.setAutoCalibrate(true);
+  //co2.setAutoCalibrate(true); TODO controll needed pin
 }
 
 void loop() {
 
+  getCo2Data();
   distance = getDistance();
-  //getCo2Data();
-
+  
   // print distance value
+  //printDistance(distance);
+
   lcd.setCursor(0, 0);
   lcd.print(distance);
   lcd.setCursor(4, 0);
   lcd.print("cm");
   lcd.setCursor(8, 0);
   lcd.print("|");
+  lcd.setCursor(0, 1);
+  lcd.print("        |");
 
-  if (distance < 200.00) {
+
+  if (distance < 200) {
     lcd.setCursor(0, 1);
     lcd.print("ABSTAND!|");
-    toClose = true;
     setAlarm();
+  } else if (distance > 1200) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(">1200cm |");
   } else {
     noTone(SPKR_PIN);           // turn Speaker off
     digitalWrite(LED_PIN, LOW); // turn LED off
-    lcd.setCursor(0, 1);
-    lcd.print("        |");
-    toClose = false;
   }
 
   // print co2 value
-  //printCo2Data(co2Level_pwm < 1000);
+  printCo2Data(co2Level_pwm < 1000);
 
   delay(100);
   lcd.clear();
