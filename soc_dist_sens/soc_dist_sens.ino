@@ -113,8 +113,8 @@ void setup() {
   // set up the LCD's number of columns and rows:
   lcd.begin(16, 2);
   lcd.clear();
-  Serial.begin(9600);
-  //Serial.begin(115200);
+  //Serial.begin(9600);
+  Serial.begin(115200);
   delay(20);           // give port time to initialize
   tfmP.begin(&Serial); // initialize device library object and...
   pinMode(LED_PIN, OUTPUT);
