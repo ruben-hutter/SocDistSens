@@ -22,13 +22,10 @@
 
 // co2 sensor pins
 #define CO2_IN 10 // pin for pwm reading
-// pin for uart reading
-#define MH_Z19_RX 0
-#define MH_Z19_TX 1
 
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 TFMPlus tfmP;     // TFMini Plus "object"
-MHZ co2(MH_Z19_RX, MH_Z19_TX, CO2_IN, MHZ19B); // MH_Z19B "object" (to adapt if uart is not used)
+MHZ co2(CO2_IN, MHZ19B); // MH_Z19B "object"
 
 int distance;
 boolean toClose; // TODO probably not needed
@@ -42,7 +39,6 @@ int16_t tfFlux; // Strength or quality of return signal
 int16_t tfTemp; // Internal temperature of Lidar sensor chip
 
 int counter = 0; // TODO counter for what?
-char dist[11];   // TODO ???
 
 /**
    Reads data from ultrasonic sensor (time).
@@ -98,7 +94,6 @@ int getDistance() {
    2) temperature
 */
 void getCo2Data() {
-  co2Level_uart = co2.readCO2UART();
   co2Level_pwm = co2.readCO2PWM();
   temperature = co2.getLastTemperature();
 }
@@ -131,11 +126,11 @@ void setTone(boolean ledIsOn) {
 }
 
 /**
- * Print the co2 level data and temperature
- * if the level is ok, or the "alarm message"
- * if the level is to high, and you should aerate
- * the room.
- */
+   Print the co2 level data and temperature
+   if the level is ok, or the "alarm message"
+   if the level is to high, and you should aerate
+   the room.
+*/
 void printCo2Data(bool toHigh) {
   if (toHigh) {
     lcd.setCursor(9, 0);
@@ -159,8 +154,8 @@ void setup() {
   // set up the LCD's number of columns and rows:
   lcd.begin(16, 2);
   lcd.clear();
-  Serial.begin(9600);
-  //Serial.begin(115200);
+  //Serial.begin(9600);
+  Serial.begin(115200);
   delay(20);           // give port time to initialize
   tfmP.begin(&Serial); // initialize device library object and...
   pinMode(LED_PIN, OUTPUT);
@@ -173,7 +168,7 @@ void setup() {
 void loop() {
 
   distance = getDistance();
-  getCo2Data();
+  //getCo2Data();
 
   // print distance value
   lcd.setCursor(0, 0);
@@ -197,7 +192,7 @@ void loop() {
   }
 
   // print co2 value
-  printCo2Data(co2Level_pwm < 1000);
+  //printCo2Data(co2Level_pwm < 1000);
 
   delay(100);
   lcd.clear();
