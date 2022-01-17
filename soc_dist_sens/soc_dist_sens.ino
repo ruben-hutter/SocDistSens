@@ -78,17 +78,17 @@ int getLidarDistance() {
 /**
    Get distance as an average value of lidar and ultrasonic sensor.
 */
-int getDistance() {
+void getDistance() {
 
   ultrasonicDistance = getUltrasonicDistance();
   lidarDistance = getLidarDistance();
 
   if (ultrasonicDistance < 30) {
-    return ultrasonicDistance;
+    distance = ultrasonicDistance;
   } else if (lidarDistance > 400) {
-    return lidarDistance;
+    distance = lidarDistance;
   }
-  return (lidarDistance + ultrasonicDistance) / 2;
+  distance = (lidarDistance + ultrasonicDistance) / 2;
 }
 
 /**
@@ -194,17 +194,16 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   pinMode(CO2_IN, INPUT);
   delay(20);
-  /*
-    // let the co2 sensor preheat
-    if (co2.isPreHeating()) {
-      while (co2.isPreHeating()) {
-        lcd.setCursor(0, 0);
-        lcd.print("Preheating...");
-        delay(100);
-        lcd.clear();
-      }
+
+  // let the co2 sensor preheat
+  if (co2.isPreHeating()) {
+    while (co2.isPreHeating()) {
+      lcd.setCursor(0, 0);
+      lcd.print("Preheating...");
+      delay(100);
+      lcd.clear();
     }
-  */
+  }
 
   // TODO check if calibration works, maybe delay needed
   //co2.setAutoCalibrate(true); TODO controll needed pin
@@ -213,13 +212,14 @@ void setup() {
 void loop() {
 
   getCo2Data();
-  distance = getDistance();
-
-  // print distance value
-  printDistance(distance);
 
   // print co2 value
   printCo2Data(co2Level_pwm < 1000);
+  
+  getDistance();
+
+  // print distance value
+  printDistance(distance);
 
   delay(100);
   lcd.clear();
