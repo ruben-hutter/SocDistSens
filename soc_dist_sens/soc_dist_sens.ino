@@ -4,7 +4,11 @@
 
 #include <LiquidCrystal.h> // library for LCD-Display
 #include <TFMPlus.h>       // library for Lidar: TFMini Plus Library
-#include <MHZ.h>           // library for CO2: MHZ19B
+
+//--------------------------------------------------------
+#include <MHZ19.h>         // library for CO2: MHZ19B
+#include <SoftwareSerial.h>
+//--------------------------------------------------------
 
 // speaker tunes
 #define NOTE_C4  262
@@ -20,12 +24,16 @@
 // speaker pin
 #define SPKR_PIN 8
 
-// co2 sensor pins
-#define CO2_IN 10 // pin for pwm reading
-
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 TFMPlus tfmP;     // TFMini Plus "object"
-MHZ co2(CO2_IN, MHZ19B); // MH_Z19B "object"
+
+//-----------------------------------------------
+#define RX_PIN 10
+#define TX_PIN 6
+#define BAUDRATE 9600
+MHZ19 myMHZ19;    // MH_Z19B "object"
+SoftwareSerial mySerial(RX_PIN, TX_PIN);
+//-----------------------------------------------
 
 int distance;
 int ultrasonicDistance;
@@ -97,8 +105,8 @@ void getDistance() {
    2) temperature
 */
 void getCo2Data() {
-  co2Level_pwm = co2.readCO2PWM();
-  temperature = co2.getLastTemperature(); // TODO check if correct after calibration
+  co2Level_pwm = myMHZ19.getCO2();
+  temperature = myMHZ19.getTemperature();
 }
 
 /**
@@ -192,21 +200,11 @@ void setup() {
   delay(20);           // give port time to initialize
   tfmP.begin(&Serial); // initialize device library object and...
   pinMode(LED_PIN, OUTPUT);
-  pinMode(CO2_IN, INPUT);
   delay(20);
 
-  // let the co2 sensor preheat
-  if (co2.isPreHeating()) {
-    while (co2.isPreHeating()) {
-      lcd.setCursor(0, 0);
-      lcd.print("Preheating...");
-      delay(100);
-      lcd.clear();
-    }
-  }
-
-  // TODO check if calibration works, maybe delay needed
-  //co2.setAutoCalibrate(true); TODO controll needed pin
+  mySerial.begin(BAUDRATE);
+  myMHZ19.begin(mySerial);
+  myMHZ19.autoCalibration();
 }
 
 void loop() {
