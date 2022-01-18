@@ -10,6 +10,9 @@
 #include <SoftwareSerial.h>
 //--------------------------------------------------------
 
+// Serial Boud rates
+#define BAUDRATE_LIDAR 115200
+
 // speaker tunes
 #define NOTE_C4  262
 #define NOTE_G3  196
@@ -28,9 +31,9 @@ LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 TFMPlus tfmP;     // TFMini Plus "object"
 
 //-----------------------------------------------
-#define RX_PIN 10
-#define TX_PIN 6
-#define BAUDRATE 9600
+#define RX_PIN 6  // GREEN
+#define TX_PIN 10 // BLUE
+#define BAUDRATE_CO2 9600
 MHZ19 myMHZ19;    // MH_Z19B "object"
 SoftwareSerial mySerial(RX_PIN, TX_PIN);
 //-----------------------------------------------
@@ -39,7 +42,7 @@ int distance;
 int ultrasonicDistance;
 int lidarDistance;
 
-int co2Level_pwm;
+int co2Level;
 int temperature;
 
 int16_t tfDist; // Distance to object in centimeters
@@ -75,12 +78,10 @@ int getUltrasonicDistance() {
    Get the lidar distance in centimeters.
 */
 int getLidarDistance() {
-  // TODO possibly remove if statemant, if the getData() has a default "error" value
   if (tfmP.getData(tfDist, tfFlux, tfTemp)) {
     return tfDist;
-  } else {
-    return -1;
   }
+  return -1;
 }
 
 /**
@@ -90,13 +91,14 @@ void getDistance() {
 
   ultrasonicDistance = getUltrasonicDistance();
   lidarDistance = getLidarDistance();
-
+  
   if (ultrasonicDistance < 30) {
     distance = ultrasonicDistance;
   } else if (lidarDistance > 400) {
     distance = lidarDistance;
+  } else {
+    distance = (lidarDistance + ultrasonicDistance) / 2;
   }
-  distance = (lidarDistance + ultrasonicDistance) / 2;
 }
 
 /**
@@ -105,7 +107,7 @@ void getDistance() {
    2) temperature
 */
 void getCo2Data() {
-  co2Level_pwm = myMHZ19.getCO2();
+  co2Level = myMHZ19.getCO2();
   temperature = myMHZ19.getTemperature();
 }
 
@@ -143,6 +145,7 @@ void setTone(boolean ledIsOn) {
    the room.
 */
 void printCo2Data(bool toHigh) {
+  toHigh = false;
   if (toHigh) {
     lcd.setCursor(9, 0);
     lcd.print("AIR THE");
@@ -150,7 +153,7 @@ void printCo2Data(bool toHigh) {
     lcd.print("ROOM!");
   } else {
     lcd.setCursor(9, 0);
-    lcd.print(co2Level_pwm);
+    lcd.print(co2Level);
     lcd.setCursor(12, 0);
     lcd.print("ppm");
     lcd.setCursor(9, 1);
@@ -174,10 +177,8 @@ void printDistance(int distance) {
   lcd.setCursor(0, 1);
   lcd.print("        |");
 
-
   if (distance < 200) {
     lcd.setCursor(0, 1);
-    //lcd.print("ABSTAND!|");
     lcd.print("DISTANCE|");
     setAlarm();
   } else if (distance > 1200) {
@@ -195,16 +196,16 @@ void setup() {
   // set up the LCD's number of columns and rows:
   lcd.begin(16, 2);
   lcd.clear();
-  //Serial.begin(9600);
-  Serial.begin(115200);
+  Serial.begin(BAUDRATE_LIDAR);
   delay(20);           // give port time to initialize
   tfmP.begin(&Serial); // initialize device library object and...
   pinMode(LED_PIN, OUTPUT);
   delay(20);
-
-  mySerial.begin(BAUDRATE);
+//-----------------------------
+  mySerial.begin(BAUDRATE_CO2);
   myMHZ19.begin(mySerial);
   myMHZ19.autoCalibration();
+//-----------------------------
 }
 
 void loop() {
@@ -212,13 +213,13 @@ void loop() {
   getCo2Data();
 
   // print co2 value
-  printCo2Data(co2Level_pwm < 1000);
+  printCo2Data(co2Level < 1000);
   
   getDistance();
 
   // print distance value
   printDistance(distance);
 
-  delay(100);
+  delay(1000);
   lcd.clear();
 }
