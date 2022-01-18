@@ -91,7 +91,7 @@ void getDistance() {
 
   ultrasonicDistance = getUltrasonicDistance();
   lidarDistance = getLidarDistance();
-  
+
   if (ultrasonicDistance < 30) {
     distance = ultrasonicDistance;
   } else if (lidarDistance > 400) {
@@ -201,11 +201,11 @@ void setup() {
   tfmP.begin(&Serial); // initialize device library object and...
   pinMode(LED_PIN, OUTPUT);
   delay(20);
-//-----------------------------
+  //-----------------------------
   mySerial.begin(BAUDRATE_CO2);
   myMHZ19.begin(mySerial);
   myMHZ19.autoCalibration();
-//-----------------------------
+  //-----------------------------
 }
 
 void loop() {
@@ -214,7 +214,7 @@ void loop() {
 
   // print co2 value
   printCo2Data(co2Level < 1000);
-  
+
   getDistance();
 
   // print distance value
