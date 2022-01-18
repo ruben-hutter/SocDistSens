@@ -21,17 +21,18 @@
 #define SPKR_PIN 8
 
 // co2 sensor pins
-#define CO2_IN 10 // pin for pwm reading
+#define RX_PIN 6
+#define TX_PIN 10
 
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 TFMPlus tfmP;     // TFMini Plus "object"
-MHZ co2(CO2_IN, MHZ19B); // MH_Z19B "object"
+MHZ mhz19(RX_PIN, TX_PIN, MHZ19B); // MH_Z19B "object"
 
 int distance;
 int ultrasonicDistance;
 int lidarDistance;
 
-int co2Level_pwm;
+int co2Level;
 int temperature;
 
 int16_t tfDist; // Distance to object in centimeters
@@ -67,7 +68,6 @@ int getUltrasonicDistance() {
    Get the lidar distance in centimeters.
 */
 int getLidarDistance() {
-  // TODO possibly remove if statemant, if the getData() has a default "error" value
   if (tfmP.getData(tfDist, tfFlux, tfTemp)) {
     return tfDist;
   } else {
@@ -97,8 +97,8 @@ void getDistance() {
    2) temperature
 */
 void getCo2Data() {
-  co2Level_pwm = co2.readCO2PWM();
-  temperature = co2.getLastTemperature(); // TODO check if correct after calibration
+  co2Level = mhz19.readCO2UART();
+  temperature = mhz19.getLastTemperature();
 }
 
 /**
@@ -135,6 +135,9 @@ void setTone(boolean ledIsOn) {
    the room.
 */
 void printCo2Data(bool toHigh) {
+  
+  toHigh = false;
+  
   if (toHigh) {
     lcd.setCursor(9, 0);
     lcd.print("AIR THE");
@@ -142,7 +145,7 @@ void printCo2Data(bool toHigh) {
     lcd.print("ROOM!");
   } else {
     lcd.setCursor(9, 0);
-    lcd.print(co2Level_pwm);
+    lcd.print(co2Level);
     lcd.setCursor(12, 0);
     lcd.print("ppm");
     lcd.setCursor(9, 1);
@@ -187,17 +190,15 @@ void setup() {
   // set up the LCD's number of columns and rows:
   lcd.begin(16, 2);
   lcd.clear();
-  //Serial.begin(9600);
   Serial.begin(115200);
   delay(20);           // give port time to initialize
   tfmP.begin(&Serial); // initialize device library object and...
   pinMode(LED_PIN, OUTPUT);
-  pinMode(CO2_IN, INPUT);
   delay(20);
 
   // let the co2 sensor preheat
-  if (co2.isPreHeating()) {
-    while (co2.isPreHeating()) {
+  if (mhz19.isPreHeating()) {
+    while (mhz19.isPreHeating()) {
       lcd.setCursor(0, 0);
       lcd.print("Preheating...");
       delay(100);
@@ -214,7 +215,7 @@ void loop() {
   getCo2Data();
 
   // print co2 value
-  printCo2Data(co2Level_pwm < 1000);
+  printCo2Data(co2Level < 1000);
   
   getDistance();
 
