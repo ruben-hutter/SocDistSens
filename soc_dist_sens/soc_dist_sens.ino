@@ -4,14 +4,12 @@
 
 #include <LiquidCrystal.h> // library for LCD-Display
 #include <TFMPlus.h>       // library for Lidar: TFMini Plus Library
-
-//--------------------------------------------------------
 #include <MHZ19.h>         // library for CO2: MHZ19B
 #include <SoftwareSerial.h>
-//--------------------------------------------------------
 
-// Serial Boud rates
+// serial boud rates
 #define BAUDRATE_LIDAR 115200
+#define BAUDRATE_CO2 9600
 
 // speaker tunes
 #define NOTE_C4  262
@@ -21,6 +19,10 @@
 #define TRIG_PIN  9
 #define ECHO_PIN  7
 
+// co2 sensor
+#define RX_PIN 6
+#define TX_PIN 10
+
 // led pin
 #define LED_PIN 14
 
@@ -29,14 +31,8 @@
 
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 TFMPlus tfmP;     // TFMini Plus "object"
-
-//-----------------------------------------------
-#define RX_PIN 6  // GREEN
-#define TX_PIN 10 // BLUE
-#define BAUDRATE_CO2 9600
-MHZ19 myMHZ19;    // MH_Z19B "object"
 SoftwareSerial mySerial(RX_PIN, TX_PIN);
-//-----------------------------------------------
+MHZ19 myMHZ19;    // MH_Z19B "object"
 
 int distance;
 int ultrasonicDistance;
@@ -96,15 +92,15 @@ void getDistance() {
     distance = ultrasonicDistance;
   } else if (lidarDistance > 400) {
     distance = lidarDistance;
+  } else if (lidarDistance == -1) {
+    distance = ultrasonicDistance;
   } else {
     distance = (lidarDistance + ultrasonicDistance) / 2;
   }
 }
 
 /**
-   Get 3 different values from co2 sensor:
-   1) ppm_pwm
-   2) temperature
+   Get co2 value and temperature from co2 sensor:
 */
 void getCo2Data() {
   co2Level = myMHZ19.getCO2();
@@ -193,7 +189,6 @@ void printDistance(int distance) {
 
 
 void setup() {
-  // set up the LCD's number of columns and rows:
   lcd.begin(16, 2);
   lcd.clear();
   Serial.begin(BAUDRATE_LIDAR);
@@ -201,11 +196,9 @@ void setup() {
   tfmP.begin(&Serial); // initialize device library object and...
   pinMode(LED_PIN, OUTPUT);
   delay(20);
-  //-----------------------------
   mySerial.begin(BAUDRATE_CO2);
   myMHZ19.begin(mySerial);
   myMHZ19.autoCalibration();
-  //-----------------------------
 }
 
 void loop() {
